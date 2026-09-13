@@ -1,0 +1,673 @@
+<meta charset="utf-8">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0F1519">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuner — Fardriver register workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --ink:#0F1519; --panel:#19222A; --panel-2:#212C36; --line:#2E3C47;
+    --text:#E6EDF2; --dim:#8296A4; --amber:#FFA51F; --cyan:#47D5E6;
+    --red:#FF5240; --green:#64D98A; --violet:#A98BFF;
+    --num:"Barlow Condensed",system-ui,sans-serif;
+    --body:"Barlow",system-ui,-apple-system,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--ink);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased}
+  body{min-height:100dvh;padding:10px 12px calc(20px + env(safe-area-inset-bottom));max-width:1100px;margin:0 auto}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  button:disabled{opacity:.38;cursor:not-allowed}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+  .bar{display:flex;align-items:center;gap:9px;padding-bottom:10px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);
+        border-radius:999px;padding:6px 13px;font-size:14px;color:var(--dim)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+  .dot.live{background:var(--green);box-shadow:0 0 0 4px rgba(100,217,138,.15)}
+  .dot.demo{background:var(--cyan);box-shadow:0 0 0 4px rgba(71,213,230,.15)}
+  .dot.err{background:var(--red)}
+  .bar .spacer{flex:1}
+
+  .btn{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 14px;
+       font-size:14px;font-weight:500;white-space:nowrap}
+  .btn:hover:not(:disabled){background:#2A3743}
+  .btn.primary{background:var(--amber);border-color:var(--amber);color:#17120A;font-weight:600}
+  .btn.primary:hover:not(:disabled){background:#FFC868}
+  .btn.danger{background:var(--red);border-color:var(--red);color:#1A0E0C;font-weight:600}
+  .btn.sm{padding:5px 10px;font-size:13px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:9px}
+  .card h2{font-size:15px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .card h2 .spacer{flex:1}
+  .sub{font-size:13px;color:var(--dim);line-height:1.55;margin-bottom:11px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row.mt{margin-top:11px}
+
+  .cov{height:5px;background:var(--panel-2);border-radius:3px;overflow:hidden;margin:9px 0 4px}
+  .cov i{display:block;height:100%;width:0;background:var(--cyan);transition:width .3s ease}
+
+  /* register grid */
+  #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:3px;
+        max-height:270px;overflow-y:auto;padding-right:4px;margin-top:4px}
+  .reg{background:var(--ink);border:1px solid var(--line);border-radius:5px;padding:4px 5px;
+       font-family:var(--mono);font-size:10.5px;line-height:1.4;text-align:left;cursor:pointer}
+  .reg:hover{border-color:var(--dim)}
+  .reg .a{color:var(--dim)}
+  .reg .v{color:var(--text);font-size:12px}
+  .reg.cold{opacity:.3}
+  .reg.fresh{border-color:var(--cyan)}
+  .reg.named{border-color:var(--violet)}
+  .reg.diff{border-color:var(--amber);background:#241C0D}
+  .reg.diff .v{color:var(--amber)}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-weight:600;color:var(--dim);font-size:12.5px;padding:6px 8px 6px 0;border-bottom:1px solid var(--line)}
+  td{padding:7px 8px 7px 0;border-bottom:1px solid #222D36;vertical-align:middle}
+  td.m{font-family:var(--mono);font-size:12.5px}
+  tr:last-child td{border-bottom:none}
+  .delta{color:var(--amber);font-weight:600}
+
+  input,select{background:var(--ink);border:1px solid var(--line);border-radius:7px;color:var(--text);
+               padding:7px 9px;font:500 14px var(--body);min-width:0}
+  input[type=number]{width:96px}
+  .f{display:flex;flex-direction:column;gap:4px}
+  .f label{font-size:12px;color:var(--dim)}
+
+  .arm{display:flex;align-items:center;gap:10px;background:#2A1A19;border:1px solid var(--red);
+       border-radius:9px;padding:11px 13px;margin-bottom:12px}
+  .arm.safe{background:var(--panel-2);border-color:var(--line)}
+  .arm .txt{flex:1;font-size:13px;line-height:1.5}
+  .arm b{display:block;font-size:14px;margin-bottom:2px}
+
+  .preview{font-family:var(--mono);font-size:13px;background:var(--ink);border:1px solid var(--line);
+           border-radius:7px;padding:10px;margin-top:11px;color:var(--cyan)}
+  .preview .lbl{color:var(--dim);font-family:var(--body);font-size:12px;display:block;margin-bottom:5px}
+
+  #log{font-family:var(--mono);font-size:12px;line-height:1.6;background:var(--ink);border:1px solid var(--line);
+       border-radius:7px;padding:10px;height:140px;overflow:auto;margin-top:11px;white-space:pre-wrap}
+  #log .ok{color:var(--green)} #log .bad{color:var(--red)} #log .w{color:var(--amber)} #log .d{color:var(--dim)}
+
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(150%);
+         background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:11px 18px;
+         font-size:14.5px;max-width:90vw;text-align:center;transition:transform .26s cubic-bezier(.2,.9,.3,1);z-index:50}
+  #toast.up{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="bar">
+  <span class="pill"><span class="dot" id="dot"></span><span id="status">Not connected</span></span>
+  <span class="spacer"></span>
+  <a class="btn" href="index.html" style="text-decoration:none">Dash</a>
+  <button class="btn" id="demoBtn">Demo controller</button>
+  <button class="btn primary" id="connBtn">Connect bike</button>
+</div>
+
+<!-- ══ DISCOVERY ══ -->
+<div class="card">
+  <h2>Find the register<span class="spacer"></span>
+    <span style="font-size:13px;color:var(--dim)" id="cov">0 of 256 seen</span></h2>
+  <p class="sub">The controller exposes 256 sixteen-bit registers. Nobody has published which one holds which
+    setting, so you map them yourself: capture a snapshot, change one setting in the official Fardriver app,
+    capture again. Whatever moved is the register for that setting.</p>
+  <div class="cov"><i id="covBar"></i></div>
+  <div class="row mt">
+    <button class="btn" id="snapBtn">Capture snapshot</button>
+    <button class="btn" id="diffBtn" disabled>Compare with now</button>
+    <button class="btn" id="clearDiffBtn" disabled>Clear</button>
+  </div>
+  <div id="diffOut"></div>
+</div>
+
+<!-- ══ REGISTERS ══ -->
+<div class="card">
+  <h2>Live registers<span class="spacer"></span>
+    <button class="btn sm" id="dumpBtn">Export dump</button></h2>
+  <p class="sub">Tap any register to name it. Violet means named, cyan means it just updated, amber means it
+    changed since your snapshot.</p>
+  <div id="grid"></div>
+</div>
+
+<!-- ══ NAMED PARAMS ══ -->
+<div class="card">
+  <h2>Your parameter map<span class="spacer"></span>
+    <button class="btn sm" id="expBtn">Export map</button>
+    <button class="btn sm" id="impBtn">Import map</button></h2>
+  <p class="sub" id="mapEmpty">Nothing mapped yet. Find a register above, tap it, give it a name and the
+    safe range you'll allow.</p>
+  <table id="mapTable" hidden><thead><tr>
+    <th>Name</th><th>Address</th><th>Raw</th><th>Value</th><th>Limits</th><th></th>
+  </tr></thead><tbody id="mapBody"></tbody></table>
+</div>
+
+<!-- ══ WRITE ══ -->
+<div class="card">
+  <h2>Write to controller</h2>
+
+  <div class="arm safe" id="armBox">
+    <span class="txt"><b id="armTitle">Writes are locked</b>
+      <span id="armMsg">Every write is checked back against the controller before it's called a success.
+        Bike on a stand, wheel off the ground.</span></span>
+    <button class="btn" id="armBtn">Unlock</button>
+  </div>
+
+  <div class="row">
+    <div class="f"><label for="wTarget">Target</label>
+      <select id="wTarget"><option value="">Raw address…</option></select></div>
+    <div class="f"><label for="wAddr">Address (hex)</label>
+      <input id="wAddr" type="text" value="00" maxlength="2" style="width:78px;font-family:var(--mono)"></div>
+    <div class="f"><label for="wVal">Value (raw)</label>
+      <input id="wVal" type="number" min="0" max="65535" step="1" value="0"></div>
+  </div>
+
+  <div class="preview"><span class="lbl">Bytes that will be sent</span><span id="wPreview">—</span></div>
+
+  <div class="row mt">
+    <button class="btn danger" id="wBtn" disabled>Send and verify</button>
+    <button class="btn" id="rbBtn">Read back only</button>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ══════════════════════════════════════════════════════════════
+  //  PROTOCOL
+  //
+  //  Reads  — 16 bytes: AA | 0x80+idx | data[12] | crc[2]
+  //           idx & 0x3F indexes a table of word addresses; the 12
+  //           payload bytes are 6 consecutive 16-bit registers.
+  //
+  //  Writes — 8 bytes:  AA | flags<<6|len | addr | addr | d[2] | crc[2]
+  //           flags = 1 (write), len = total minus 2 = 6.
+  //           The address is repeated as its own confirmation byte.
+  //
+  //  CRC-16 both ways: init 0x7F3C, reflected poly 0xA001, over all
+  //  bytes except the trailing two, stored little-endian.
+  //
+  //  Source: jackhumbert/fardriver-controllers
+  // ══════════════════════════════════════════════════════════════
+
+  const SERVICE = 0xffe0;
+  const CHARS = [0xffec, 0xffe1, 0xffe2, 0xffe4];
+
+  const ADDR = [
+    0xE2,0xE8,0xEE,0xE4,0x06,0x0C,0x12,0xE2,0xE8,0xEE,0x18,0x1E,0x24,0x2A,
+    0xE2,0xE8,0xEE,0x30,0x5D,0x63,0x69,0xE2,0xE8,0xEE,0x7C,0x82,0x88,0x8E,
+    0xE2,0xE8,0xEE,0x94,0x9A,0xA0,0xA6,0xE2,0xE8,0xEE,0xAC,0xB2,0xB8,0xBE,
+    0xE2,0xE8,0xEE,0xC4,0xCA,0xD0,0xE2,0xE8,0xEE,0xD6,0xDC,0xF4,0xFA
+  ];
+
+  const crc16 = (b, n) => {
+    let c = 0x7F3C;
+    for (let i = 0; i < n; i++) {
+      c ^= b[i];
+      for (let j = 0; j < 8; j++) c = (c & 1) ? ((c >>> 1) ^ 0xA001) : (c >>> 1);
+    }
+    return c & 0xFFFF;
+  };
+  const u16 = (b, i) => (b[i + 1] << 8) | b[i];
+  const hex2 = v => v.toString(16).toUpperCase().padStart(2, "0");
+  const hex4 = v => v.toString(16).toUpperCase().padStart(4, "0");
+
+  // Register file: 256 words.
+  const regs   = new Uint16Array(256);
+  const seen   = new Uint8Array(256);
+  const stamp  = new Float64Array(256);
+  let snapshot = null, diffSet = null;
+
+  function onFrame(f) {
+    if (f.length !== 16 || crc16(f, 14) !== u16(f, 14)) return false;
+    const base = ADDR[f[1] & 0x3F];
+    if (base === undefined) return false;
+    const now = performance.now();
+    for (let w = 0; w < 6; w++) {
+      const a = (base + w) & 0xFF;
+      const v = u16(f, 2 + w * 2);
+      if (regs[a] !== v || !seen[a]) gridDirty = true;
+      regs[a] = v; seen[a] = 1; stamp[a] = now;
+    }
+    return true;
+  }
+
+  let rx = new Uint8Array(0);
+  function ingest(chunk) {
+    const m = new Uint8Array(rx.length + chunk.length);
+    m.set(rx); m.set(chunk, rx.length);
+    let i = 0;
+    while (m.length - i >= 16) {
+      if (m[i] !== 0xAA) { i++; continue; }
+      onFrame(m.subarray(i, i + 16));
+      i += 16;
+    }
+    rx = m.subarray(i);
+    if (rx.length > 64) rx = rx.subarray(rx.length - 32);
+  }
+
+  function writeFrame(addr, value) {
+    const b = new Uint8Array(8);
+    b[0] = 0xAA;
+    b[1] = (1 << 6) | 6;      // flags=write, length = total - 2
+    b[2] = addr & 0xFF;
+    b[3] = addr & 0xFF;       // confirmation copy
+    b[4] = value & 0xFF;
+    b[5] = (value >> 8) & 0xFF;
+    const c = crc16(b, 6);
+    b[6] = c & 0xFF; b[7] = (c >> 8) & 0xFF;
+    return b;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  UI PLUMBING
+  // ══════════════════════════════════════════════════════════════
+
+  const $ = id => document.getElementById(id);
+  let toastT;
+  function toast(m) {
+    const e = $("toast"); e.textContent = m; e.classList.add("up");
+    clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("up"), 4200);
+  }
+  function log(msg, cls = "d") {
+    const el = $("log");
+    const t = new Date().toTimeString().slice(0, 8);
+    el.innerHTML += `<span class="${cls}">${t}  ${msg}</span>\n`;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // ── register grid ──
+  const grid = $("grid");
+  const cells = [];
+  for (let a = 0; a < 256; a++) {
+    const b = document.createElement("button");
+    b.className = "reg cold";
+    b.innerHTML = `<span class="a">${hex2(a)}</span><br><span class="v">----</span>`;
+    b.addEventListener("click", () => nameRegister(a));
+    grid.appendChild(b);
+    cells.push(b);
+  }
+
+  let gridDirty = true;
+  function paintGrid() {
+    if (!gridDirty) return;
+    gridDirty = false;
+    const now = performance.now();
+    let n = 0;
+    for (let a = 0; a < 256; a++) {
+      const c = cells[a];
+      if (!seen[a]) { c.className = "reg cold"; continue; }
+      n++;
+      const named = params.some(p => p.addr === a);
+      const diff = diffSet && diffSet.has(a);
+      const fresh = now - stamp[a] < 900;
+      c.className = "reg" + (diff ? " diff" : named ? " named" : fresh ? " fresh" : "");
+      c.querySelector(".v").textContent = hex4(regs[a]);
+      c.title = `${hex2(a)} = ${regs[a]} (0x${hex4(regs[a])})`;
+    }
+    $("cov").textContent = n + " of 256 seen";
+    $("covBar").style.width = (n / 256 * 100) + "%";
+  }
+  setInterval(paintGrid, 350);
+  setInterval(() => { gridDirty = true; }, 1000);
+
+  // ── snapshot / diff ──
+  $("snapBtn").addEventListener("click", () => {
+    snapshot = regs.slice();
+    $("diffBtn").disabled = false;
+    toast("Snapshot captured. Now change one setting in the Fardriver app, then compare.");
+    log("snapshot captured", "w");
+  });
+
+  $("diffBtn").addEventListener("click", () => {
+    if (!snapshot) return;
+    const rows = [];
+    diffSet = new Set();
+    for (let a = 0; a < 256; a++) {
+      if (!seen[a]) continue;
+      if (snapshot[a] !== regs[a]) { diffSet.add(a); rows.push(a); }
+    }
+    gridDirty = true;
+    $("clearDiffBtn").disabled = false;
+
+    const out = $("diffOut");
+    if (!rows.length) {
+      out.innerHTML = `<p class="sub" style="margin-top:12px;color:var(--amber)">
+        Nothing changed. Either the setting hasn't been written yet, or its register hasn't come
+        round in the rotation — wait a few seconds and compare again.</p>`;
+      return;
+    }
+    out.innerHTML = `<table style="margin-top:12px"><thead><tr>
+      <th>Address</th><th>Before</th><th>After</th><th>Change</th><th></th></tr></thead><tbody>` +
+      rows.map(a => `<tr>
+        <td class="m">0x${hex2(a)}</td>
+        <td class="m">${snapshot[a]}</td>
+        <td class="m">${regs[a]}</td>
+        <td class="m delta">${regs[a] - snapshot[a] > 0 ? "+" : ""}${regs[a] - snapshot[a]}</td>
+        <td><button class="btn sm" data-name="${a}">Name it</button></td>
+      </tr>`).join("") + `</tbody></table>
+      <p class="sub" style="margin-top:10px">${rows.length} register${rows.length > 1 ? "s" : ""} moved.
+      Live values like rpm and temperature drift on their own — if several moved, change the same
+      setting again by a different amount and see which one tracks it.</p>`;
+
+    out.querySelectorAll("[data-name]").forEach(b =>
+      b.addEventListener("click", () => nameRegister(+b.dataset.name)));
+  });
+
+  $("clearDiffBtn").addEventListener("click", () => {
+    diffSet = null; snapshot = null; gridDirty = true;
+    $("diffOut").innerHTML = "";
+    $("diffBtn").disabled = true;
+    $("clearDiffBtn").disabled = true;
+  });
+
+  // ── parameter map ──
+  const params = [];
+
+  function nameRegister(addr) {
+    const existing = params.find(p => p.addr === addr);
+    const name = prompt(
+      `Register 0x${hex2(addr)} currently reads ${regs[addr]}.\n\nWhat is this setting called?`,
+      existing ? existing.name : "");
+    if (name === null) return;
+    if (!name.trim()) {
+      const i = params.findIndex(p => p.addr === addr);
+      if (i >= 0) { params.splice(i, 1); renderMap(); gridDirty = true; }
+      return;
+    }
+    const lo = parseInt(prompt("Lowest raw value you'll ever allow:",
+      existing ? existing.min : Math.max(0, regs[addr] - 100)), 10);
+    const hi = parseInt(prompt("Highest raw value you'll ever allow:",
+      existing ? existing.max : regs[addr] + 100), 10);
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) {
+      toast("Limits look wrong — nothing saved."); return;
+    }
+    const scale = parseFloat(prompt(
+      "Raw-to-real multiplier (1 if the raw number is already the real value, 0.1 if raw 725 means 72.5):",
+      existing ? existing.scale : "1")) || 1;
+    const unit = prompt("Unit label (A, V, km/h, blank for none):", existing ? existing.unit : "") || "";
+
+    if (existing) Object.assign(existing, { name: name.trim(), min: lo, max: hi, scale, unit });
+    else params.push({ addr, name: name.trim(), min: lo, max: hi, scale, unit });
+    renderMap(); gridDirty = true;
+  }
+
+  function renderMap() {
+    $("mapEmpty").hidden = params.length > 0;
+    $("mapTable").hidden = params.length === 0;
+    $("mapBody").innerHTML = params.sort((a, b) => a.addr - b.addr).map(p => `<tr>
+      <td>${p.name}</td>
+      <td class="m">0x${hex2(p.addr)}</td>
+      <td class="m">${seen[p.addr] ? regs[p.addr] : "–"}</td>
+      <td class="m">${seen[p.addr] ? (regs[p.addr] * p.scale).toFixed(p.scale === 1 ? 0 : 1) + " " + p.unit : "–"}</td>
+      <td class="m">${p.min}–${p.max}</td>
+      <td><button class="btn sm" data-edit="${p.addr}">Edit</button></td>
+    </tr>`).join("");
+    $("mapBody").querySelectorAll("[data-edit]").forEach(b =>
+      b.addEventListener("click", () => nameRegister(+b.dataset.edit)));
+
+    const sel = $("wTarget");
+    sel.innerHTML = `<option value="">Raw address…</option>` +
+      params.map(p => `<option value="${p.addr}">${p.name} (0x${hex2(p.addr)})</option>`).join("");
+  }
+  setInterval(() => { if (params.length) renderMap(); }, 2000);
+
+  // ── export / import ──
+  function download(name, text, type) {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  $("expBtn").addEventListener("click", () => {
+    if (!params.length) { toast("Nothing mapped yet."); return; }
+    download("fardriver-map.json", JSON.stringify(params, null, 2), "application/json");
+  });
+  $("impBtn").addEventListener("click", () => {
+    const txt = prompt("Paste a saved map (JSON):");
+    if (!txt) return;
+    try {
+      const arr = JSON.parse(txt);
+      if (!Array.isArray(arr)) throw new Error("not a list");
+      params.length = 0;
+      arr.forEach(p => params.push(p));
+      renderMap(); gridDirty = true;
+      toast(`Loaded ${arr.length} parameters.`);
+    } catch (e) { toast("That didn't parse as a saved map."); }
+  });
+  $("dumpBtn").addEventListener("click", () => {
+    const rows = ["address_hex,address_dec,raw_value,seen"];
+    for (let a = 0; a < 256; a++) rows.push(`0x${hex2(a)},${a},${seen[a] ? regs[a] : ""},${seen[a] ? 1 : 0}`);
+    download("register-dump.csv", rows.join("\n"), "text/csv");
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  //  WRITES
+  // ══════════════════════════════════════════════════════════════
+
+  let armed = false, txChar = null;
+
+  $("armBtn").addEventListener("click", () => {
+    if (armed) { setArmed(false); return; }
+    const ok = confirm(
+      "Unlocking writes.\n\n" +
+      "A wrong address or a wrong value can push current past what your motor, " +
+      "battery or BMS will survive, and the controller will accept it without complaint.\n\n" +
+      "Wheel off the ground, nobody on the bike. Continue?");
+    if (ok) setArmed(true);
+  });
+
+  function setArmed(v) {
+    armed = v;
+    $("armBox").classList.toggle("safe", !v);
+    $("armTitle").textContent = v ? "Writes unlocked" : "Writes are locked";
+    $("armMsg").textContent = v
+      ? "Values outside the limits you set will be refused. Every write is read back and confirmed."
+      : "Every write is checked back against the controller before it's called a success. Bike on a stand, wheel off the ground.";
+    $("armBtn").textContent = v ? "Lock" : "Unlock";
+    updateWriteBtn();
+  }
+
+  function currentTarget() {
+    const sel = $("wTarget").value;
+    if (sel !== "") {
+      const p = params.find(x => x.addr === +sel);
+      if (p) return p;
+    }
+    const a = parseInt($("wAddr").value, 16);
+    if (!Number.isFinite(a) || a < 0 || a > 255) return null;
+    return { addr: a, name: "0x" + hex2(a), min: 0, max: 65535, scale: 1, unit: "", raw: true };
+  }
+
+  function updatePreview() {
+    const t = currentTarget();
+    const v = parseInt($("wVal").value, 10);
+    if (!t || !Number.isFinite(v)) { $("wPreview").textContent = "—"; return; }
+    const b = writeFrame(t.addr, v & 0xFFFF);
+    $("wPreview").textContent = Array.from(b, x => hex2(x)).join(" ");
+    updateWriteBtn();
+  }
+
+  function updateWriteBtn() {
+    const t = currentTarget();
+    const v = parseInt($("wVal").value, 10);
+    const inRange = t && Number.isFinite(v) && v >= t.min && v <= t.max;
+    $("wBtn").disabled = !(armed && mode === "live" || armed && mode === "demo") || !inRange;
+    $("wBtn").textContent = t && Number.isFinite(v) && !inRange
+      ? `Outside ${t.min}–${t.max}` : "Send and verify";
+  }
+
+  ["wTarget", "wAddr", "wVal"].forEach(id => {
+    $(id).addEventListener("input", () => {
+      if (id === "wTarget") {
+        const p = params.find(x => x.addr === +$("wTarget").value);
+        if (p) { $("wAddr").value = hex2(p.addr); $("wVal").value = regs[p.addr] || p.min; }
+      }
+      updatePreview();
+    });
+  });
+
+  $("rbBtn").addEventListener("click", () => {
+    const t = currentTarget();
+    if (!t) { toast("Bad address."); return; }
+    log(`read 0x${hex2(t.addr)} = ${seen[t.addr] ? regs[t.addr] : "never seen"}`,
+        seen[t.addr] ? "ok" : "w");
+  });
+
+  $("wBtn").addEventListener("click", async () => {
+    const t = currentTarget();
+    const v = parseInt($("wVal").value, 10) & 0xFFFF;
+    if (!t) return;
+
+    const before = seen[t.addr] ? regs[t.addr] : null;
+    const frame = writeFrame(t.addr, v);
+    log(`write 0x${hex2(t.addr)} <- ${v}  [${Array.from(frame, hex2).join(" ")}]`, "w");
+
+    try {
+      if (mode === "demo") demoWrite(t.addr, v);
+      else await txChar.writeValueWithoutResponse(frame);
+    } catch (e) {
+      log(`send failed: ${e.message}`, "bad");
+      return;
+    }
+
+    // Verify: wait for the controller to report that register back to us.
+    const deadline = performance.now() + 4000;
+    const t0 = stamp[t.addr];
+    const check = setInterval(() => {
+      const updated = stamp[t.addr] > t0;
+      if (updated) {
+        clearInterval(check);
+        if (regs[t.addr] === v) log(`verified 0x${hex2(t.addr)} = ${v}`, "ok");
+        else log(`MISMATCH — asked ${v}, controller reports ${regs[t.addr]}` +
+                 (before !== null ? ` (was ${before})` : ""), "bad");
+        gridDirty = true;
+      } else if (performance.now() > deadline) {
+        clearInterval(check);
+        log(`no read-back within 4s — treat this write as UNCONFIRMED`, "bad");
+      }
+    }, 120);
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  //  CONNECTION
+  // ══════════════════════════════════════════════════════════════
+
+  let device = null, mode = "off";
+
+  function setMode(m, text) {
+    mode = m;
+    $("dot").className = "dot " + (m === "live" ? "live" : m === "demo" ? "demo" : m === "err" ? "err" : "");
+    $("status").textContent = text;
+    $("connBtn").textContent = m === "live" ? "Disconnect" : "Connect bike";
+    $("demoBtn").textContent = m === "demo" ? "Stop demo" : "Demo controller";
+    if (m !== "live" && m !== "demo") setArmed(false);
+    updateWriteBtn();
+  }
+
+  async function connect() {
+    if (mode === "live") { device?.gatt?.disconnect(); return; }
+    if (!navigator.bluetooth) { toast("No Bluetooth in this browser. Use Chrome on Android or desktop."); return; }
+    try {
+      setMode("off", "Choosing device…");
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [SERVICE] }], optionalServices: [SERVICE]
+      });
+      device.addEventListener("gattserverdisconnected", () => { txChar = null; setMode("err", "Disconnected"); });
+      setMode("off", "Connecting…");
+      const svc = await (await device.gatt.connect()).getPrimaryService(SERVICE);
+      let ch = null;
+      for (const id of CHARS) {
+        try { const c = await svc.getCharacteristic(id); if (c.properties.notify) { ch = c; break; } } catch (_) {}
+      }
+      if (!ch) { setMode("err", "No data stream found"); return; }
+      await ch.startNotifications();
+      ch.addEventListener("characteristicvaluechanged", e => ingest(new Uint8Array(e.target.value.buffer)));
+      txChar = ch;
+      stopDemo();
+      setMode("live", device.name || "Connected");
+      log("connected to " + (device.name || "controller"), "ok");
+    } catch (e) {
+      if (e?.name === "NotFoundError") { setMode("off", "Not connected"); return; }
+      setMode("err", "Connection failed");
+      toast(String(e?.message || e).slice(0, 140));
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  DEMO CONTROLLER — a fake register file that emits real frames
+  //  and accepts real writes, so the whole loop is exercised safely.
+  // ══════════════════════════════════════════════════════════════
+
+  const sim = new Uint16Array(256);
+  let demoTimer = null, simIdx = 0, simPhase = 0;
+
+  function seedSim() {
+    for (let a = 0; a < 256; a++) sim[a] = (a * 37 + 11) % 900;
+    sim[0xE8] = 756; sim[0xEA] = 40; sim[0xE2] = 4;
+    sim[0xDB] = 32;  sim[0xF4] = 41; sim[0xF5] = 94 << 8;
+    sim[0x30] = 300; sim[0x31] = 120; sim[0x32] = 4500;   // plausible "settings"
+  }
+
+  function demoWrite(addr, v) { sim[addr] = v & 0xFFFF; }
+
+  function demoTick() {
+    simPhase += 0.13;
+    // A couple of registers wander like real telemetry does.
+    sim[0xE2] = Math.max(0, Math.round(1800 + Math.sin(simPhase) * 1700)) * 4 % 65536;
+    sim[0xEA] = Math.round((60 + Math.sin(simPhase) * 55) * 4) & 0xFFFF;
+    sim[0xE8] = Math.round(756 - Math.max(0, Math.sin(simPhase)) * 22);
+    sim[0xF4] = Math.round(41 + Math.sin(simPhase / 6) * 9);
+
+    // Emit four frames per tick, walking the address table.
+    for (let k = 0; k < 4; k++) {
+      const idx = simIdx++ % ADDR.length;
+      const base = ADDR[idx];
+      const f = new Uint8Array(16);
+      f[0] = 0xAA; f[1] = 0x80 | idx;
+      for (let w = 0; w < 6; w++) {
+        const val = sim[(base + w) & 0xFF];
+        f[2 + w * 2] = val & 0xFF;
+        f[3 + w * 2] = (val >> 8) & 0xFF;
+      }
+      const c = crc16(f, 14);
+      f[14] = c & 0xFF; f[15] = (c >> 8) & 0xFF;
+      ingest(f);
+    }
+  }
+
+  function stopDemo() { if (demoTimer) { clearInterval(demoTimer); demoTimer = null; } }
+  $("demoBtn").addEventListener("click", () => {
+    if (demoTimer) { stopDemo(); setMode("off", "Not connected"); return; }
+    if (mode === "live") { toast("Disconnect the bike first."); return; }
+    seedSim(); simIdx = 0;
+    demoTimer = setInterval(demoTick, 90);
+    setMode("demo", "Simulated controller");
+    log("demo controller running — writes here touch nothing real", "ok");
+  });
+
+  $("connBtn").addEventListener("click", connect);
+
+  setMode("off", "Not connected");
+  renderMap();
+  updatePreview();
+  log("ready", "d");
+})();
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () =>
+      navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
